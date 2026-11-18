@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS sensores (
 
 -- ---------------------------------------------------------------
 -- Historial de condiciones ambientales
+-- (El índice idx_registros_fecha va dentro de CREATE TABLE para evitar Duplicate key name al re-ejecutar)
 -- ---------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS registros (
   id_registro  BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -41,11 +42,11 @@ CREATE TABLE IF NOT EXISTS registros (
   humedad      DECIMAL(5,2) NOT NULL,                        -- % HR
   temperatura  DECIMAL(5,2) NOT NULL,                        -- °C
   fecha_hora   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_registros_fecha (fecha_hora),
   CONSTRAINT fk_registros_sensor FOREIGN KEY (id_sensor) REFERENCES sensores(id_sensor),
   CONSTRAINT chk_humedad     CHECK (humedad BETWEEN 0 AND 100),
   CONSTRAINT chk_temperatura CHECK (temperatura BETWEEN -50 AND 100)
 );
-CREATE INDEX idx_registros_fecha ON registros (fecha_hora);
 
 -- ---------------------------------------------------------------
 -- Contacto donde llegan las notificaciones (una sola fila, id = 1)
@@ -58,11 +59,6 @@ CREATE TABLE IF NOT EXISTS contacto_notificaciones (
 
 -- ---------------------------------------------------------------
 -- Calendario de riego (RF1)
---   fecha            día elegido en el calendario
---   hora             hora elegida
---   repetir_semanal  1 = se repite el mismo día de la semana cada semana
---   canal            por dónde llega el aviso
---   ultima_notificacion  evita avisar dos veces el mismo día
 -- ---------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS calendario_riego (
   id_riego             INT AUTO_INCREMENT PRIMARY KEY,
@@ -124,15 +120,48 @@ SELECT * FROM (
 ) AS nuevos
 WHERE NOT EXISTS (SELECT 1 FROM sensores);
 
+-- ---------------------------------------------------------------
+-- Datos históricos de los últimos 7 días (para vistas semanales de Temperatura y Humedad)
+-- ---------------------------------------------------------------
 INSERT INTO registros (id_sensor, humedad, temperatura, fecha_hora)
 SELECT * FROM (
-  SELECT 1 AS id_sensor, 81.0 AS humedad, 18.2 AS temperatura, TIMESTAMP(CURDATE(), '06:00:00') AS fecha_hora
+  -- Hace 6 días
+  SELECT 1 AS id_sensor, 78.5 AS humedad, 19.4 AS temperatura, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '09:00:00') AS fecha_hora
+  UNION ALL SELECT 1, 74.2, 24.6, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '14:00:00')
+  UNION ALL SELECT 2, 79.0, 21.8, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '14:00:00')
+  UNION ALL SELECT 1, 80.1, 20.2, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '19:00:00')
+  -- Hace 5 días
+  UNION ALL SELECT 1, 81.2, 18.8, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '09:00:00')
+  UNION ALL SELECT 1, 76.5, 23.4, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '14:00:00')
+  UNION ALL SELECT 2, 80.4, 22.1, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '14:00:00')
+  UNION ALL SELECT 1, 82.0, 19.9, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '19:00:00')
+  -- Hace 4 días
+  UNION ALL SELECT 1, 79.8, 19.1, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '09:00:00')
+  UNION ALL SELECT 1, 73.0, 25.1, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '14:00:00')
+  UNION ALL SELECT 2, 77.5, 23.8, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '14:00:00')
+  UNION ALL SELECT 1, 80.6, 21.0, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '19:00:00')
+  -- Hace 3 días
+  UNION ALL SELECT 1, 82.3, 18.5, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '09:00:00')
+  UNION ALL SELECT 1, 78.4, 22.7, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '14:00:00')
+  UNION ALL SELECT 2, 81.1, 21.9, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '14:00:00')
+  UNION ALL SELECT 1, 83.0, 19.6, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '19:00:00')
+  -- Hace 2 días
+  UNION ALL SELECT 1, 80.0, 19.3, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '09:00:00')
+  UNION ALL SELECT 1, 75.8, 23.9, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '14:00:00')
+  UNION ALL SELECT 2, 79.2, 22.5, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '14:00:00')
+  UNION ALL SELECT 1, 81.5, 20.4, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '19:00:00')
+  -- Ayer
+  UNION ALL SELECT 1, 79.4, 18.9, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:00:00')
+  UNION ALL SELECT 1, 71.8, 24.8, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '14:00:00')
+  UNION ALL SELECT 2, 78.6, 23.0, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '14:00:00')
+  UNION ALL SELECT 1, 80.9, 20.7, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '19:00:00')
+  -- Hoy
+  UNION ALL SELECT 1, 81.0, 18.2, TIMESTAMP(CURDATE(), '06:00:00')
   UNION ALL SELECT 1, 80.4, 20.5, TIMESTAMP(CURDATE(), '08:00:00')
   UNION ALL SELECT 1, 79.1, 22.8, TIMESTAMP(CURDATE(), '10:00:00')
   UNION ALL SELECT 1, 72.4, 24.3, TIMESTAMP(CURDATE(), '12:00:00')
   UNION ALL SELECT 2, 80.3, 23.1, TIMESTAMP(CURDATE(), '12:00:00')
-  UNION ALL SELECT 1, 78.9, 23.7, TIMESTAMP(CURDATE(), '14:00:00')
-  UNION ALL SELECT 2, 82.1, 22.4, TIMESTAMP(CURDATE(), '14:00:00')
-  UNION ALL SELECT 1, 80.5, 22.9, TIMESTAMP(CURDATE(), '16:00:00')
+  UNION ALL SELECT 1, 74.0, 23.9, TIMESTAMP(CURDATE(), '14:00:00')
+  UNION ALL SELECT 2, 78.2, 22.8, TIMESTAMP(CURDATE(), '14:00:00')
 ) AS nuevos
-WHERE NOT EXISTS (SELECT 1 FROM registros);
+WHERE (SELECT COUNT(*) FROM registros) < 10;

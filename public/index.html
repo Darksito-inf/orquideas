@@ -120,13 +120,13 @@
   <!-- ============ CONDICIONES ============ -->
   <section id="condiciones" class="view">
     <!-- Módulo de Monitoreo Ambiental Externo -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+    <div class="card" style="margin-bottom: 1.25rem;">
+      <div class="flex-head">
         <h2 style="margin: 0;">Monitoreo en Tiempo Real (Estación Meteorológica)</h2>
         <span class="badge ok" id="api-status">En vivo</span>
       </div>
       
-      <div class="stats">
+      <div class="stats" style="margin-top: 0.75rem;">
         <div class="stat">
           <span>Temperatura Exterior</span>
           <strong id="orchid-temp">-- °C</strong>
@@ -139,17 +139,71 @@
         </div>
       </div>
 
-      <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; font-size: 0.8rem; color: #888;">
+      <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.8rem; color: #888;">
         <span>Fuente: Open-Meteo API</span>
         <span>Última sincronización: <b id="api-timer">—</b></span>
       </div>
     </div>
 
+    <!-- Control de Riego Manual (Sube humedad y disminuye temperatura gradualmente) -->
+    <div class="card riego-panel">
+      <div class="flex-head">
+        <div>
+          <h2 style="margin: 0;">💧 Control de Riego en Invernadero</h2>
+          <p class="ayuda" style="margin-top: 4px;">Activa el suministro de agua para incrementar gradualmente la humedad y reducir la temperatura de los sensores locales.</p>
+        </div>
+        <div class="acciones-riego">
+          <button class="btn btn-agua" id="btn-dar-agua" type="button">Dar agua ahora!</button>
+          <button class="btn peligro" id="btn-detener-agua" type="button" hidden>⏹ Detener agua</button>
+        </div>
+      </div>
+      <div id="progreso-riego-wrap" class="progreso-wrap" hidden>
+        <div class="progreso-barra"><div id="progreso-riego-fill" class="progreso-fill"></div></div>
+        <small id="estado-riego-txt">Aplicando riego gradual en invernadero...</small>
+      </div>
+    </div>
+
     <!-- Sensores locales -->
     <div class="stats" id="stats-condiciones"></div>
+
+    <!-- Dos versiones del Historial a lo largo de la semana (Temperatura vs Humedad) + Exportación -->
     <div class="card">
-      <h2>Historial de condiciones ambientales</h2>
+      <div class="flex-head" style="flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="margin: 0;">Evolución Semanal del Invernadero</h2>
+          <p class="ayuda" style="margin-top: 4px;">Alterna entre las dos versiones del historial semanal o guarda el reporte en tu PC.</p>
+        </div>
+        <div class="export-group">
+          <button class="btn chico sec" id="btn-export-excel" type="button" title="Guardar como planilla Excel"> Guardar Excel (.xls)</button>
+          <button class="btn chico sec" id="btn-export-word" type="button" title="Guardar como documento Word"> Guardar Word (.doc)</button>
+          <button class="btn chico" id="btn-export-pdf" type="button" title="Guardar o imprimir como PDF"> Guardar PDF</button>
+        </div>
+      </div>
+
+      <!-- Selector de las 2 versiones del historial semanal -->
+      <div class="sub-tabs" style="margin-top: 14px;">
+        <button type="button" id="ver-humedad" class="sub-tab active">💧 Versión 1: Historial Semanal de Humedad</button>
+        <button type="button" id="ver-temperatura" class="sub-tab">🌡️ Versión 2: Historial Semanal de Temperatura</button>
+      </div>
+
+      <!-- Gráfico de barras semanal -->
+      <div id="grafico-semanal" class="chart-semanal"></div>
+
+      <!-- Tabla resumen de los 7 días según versión elegida -->
+      <h3 id="titulo-tabla-semanal" class="subtitulo-tabla">Resumen diario de Humedad (últimos 7 días)</h3>
       <table>
+        <thead id="head-semanal"></thead>
+        <tbody id="tabla-semanal"></tbody>
+      </table>
+    </div>
+
+    <!-- Historial detallado de lecturas -->
+    <div class="card">
+      <div class="flex-head">
+        <h2 style="margin: 0;">Registro detallado de lecturas</h2>
+        <span class="badge info" id="badge-version-detalle">Mostrando: Humedad destacada</span>
+      </div>
+      <table style="margin-top: 12px;">
         <thead><tr><th>Sensor</th><th>Humedad</th><th>Temperatura</th><th>Fecha y hora</th><th>Estado</th></tr></thead>
         <tbody id="tabla-condiciones"></tbody>
       </table>

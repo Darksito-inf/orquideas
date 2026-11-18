@@ -101,12 +101,39 @@ router.post('/notificaciones/prueba', ah(async (req, res) => {
   res.json({ resultados: await notificador.enviarPrueba(canal) });
 }));
 
-// ---------- Condiciones ambientales (datos de ejemplo cargados en la BD) ----------
+// ---------- Condiciones ambientales e Historial Semanal ----------
 router.get('/condiciones', ah(async (req, res) => {
-  const [parametros, sensores, ultimas, historial] = await Promise.all([
-    condiciones.parametros(), condiciones.sensores(), condiciones.ultimasLecturas(), condiciones.historial()
+  const [parametros, sensores, ultimas, historial, semanal] = await Promise.all([
+    condiciones.parametros(),
+    condiciones.sensores(),
+    condiciones.ultimasLecturas(),
+    condiciones.historial(),
+    condiciones.historialSemanal()
   ]);
-  res.json({ parametros, sensores, ultimas, historial });
+  res.json({ parametros, sensores, ultimas, historial, semanal });
+}));
+
+// Registra un paso de riego manual (sube humedad y baja temperatura gradualmente)
+router.post('/condiciones/regar-paso', ah(async (req, res) => {
+  const ultimas = await condiciones.ultimasLecturas();
+  if (!ultimas.length) {
+    return res.status(400).json({ error: 'No hay sensores con lecturas iniciales.' });
+  }
+
+  const nuevasLecturas = [];
+  for (const s of ultimas) {
+    // Subida gradual de humedad (+1.4% por paso, tope 95%) y bajada gradual de temperatura (-0.4 °C por paso, piso 16 °C)
+    const nuevaHumedad = Math.min(95, Number((Number(s.humedad) + 1.4).toFixed(1)));
+    const nuevaTemp = Math.max(16, Number((Number(s.temperatura) - 0.4).toFixed(1)));
+    await condiciones.registrarLectura({
+      id_sensor: s.id_sensor,
+      humedad: nuevaHumedad,
+      temperatura: nuevaTemp
+    });
+    nuevasLecturas.push({ id_sensor: s.id_sensor, nombre: s.nombre, humedad: nuevaHumedad, temperatura: nuevaTemp });
+  }
+
+  res.json({ ok: true, lecturas: nuevasLecturas });
 }));
 
 module.exports = router;
